@@ -1,0 +1,14 @@
+{
+  "name": "tailwind-qjs-daisyui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "POC: Tailwind CSS v4 core + oxide scanner + daisyUI running on embedded QuickJS (rquickjs)",
+  "scripts": {
+    "build:bundle": "esbuild driver-src/driver.js --bundle --format=iife --platform=neutral --external:node:* --define:process.env.NODE_ENV=\"production\" --outfile=dist/bundle.js --log-level=info",
+    "smoke": "node driver-src/smoke.mjs fixture out.node.css",
+    "smoke:fixture2": "node driver-src/smoke.mjs fixture2 out2.node.css"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
