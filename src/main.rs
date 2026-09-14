@@ -24,7 +24,7 @@ const USAGE: &str = "\
 tailwindcss-qjs-poc: compile Tailwind v4 + daisyUI inside QuickJS (POC)
 
 Usage:
-  tailwindcss-qjs-poc -i <input.css> -o <output.css> [--content <dir> ...]
+  tailwindcss-qjs-poc -i <input.css> -o <output.css> [--content <dir> ...] [--watch [--poll <ms>]]
   tailwindcss-qjs-poc --self-test
   tailwindcss-qjs-poc --help
 
@@ -34,25 +34,40 @@ Options:
   --content <dir>        Oxide scan base dir (repeatable). Default: the input
                          file's own parent dir. Each dir is scanned with a single
                          glob (base=dir, pattern `**/*`); candidates are unioned.
+  --watch                Rebuild on change (polling, see below). Single-threaded;
+                         Ctrl-C just kills the process (no handler).
+  --poll <ms>            Poll interval for --watch (default 250, matching
+                         upstream). Rejected without --watch.
   --self-test            Run the step 1 + 2 diagnostics (hello eval, scan binding,
                          bytecode roundtrip, fixture build with asserts).
   -h, --help             Print this usage.
 
+Watch semantics: after the initial build, the watched file set is the oxide
+Scanner's own scanned files plus the input CSS. Every <poll> ms their mtimes
+(+ file size as tiebreak) are compared; on change the scan + QuickJS build
+re-run in the same persistent context and the output is rewritten only if
+bytes differ. Polling, not fs-events — no extra deps.
+
 Exit codes: 0 ok, 1 build failure, 2 usage/CLI error.
 POC limits: tailwindcss checkout expected at ../tailwindcss relative to cwd;
-no watch, no minify, no sourcemaps.\
+no minify, no sourcemaps.\
 ";
 
 struct Cli {
     input: PathBuf,
     output: PathBuf,
     contents: Vec<String>,
+    watch: bool,
+    poll_ms: u64,
 }
 
 fn parse_cli(argv: &[String]) -> Result<Cli, String> {
     let mut input: Option<PathBuf> = None;
     let mut output: Option<PathBuf> = None;
     let mut contents: Vec<String> = vec![];
+    let mut watch = false;
+    let mut poll_ms: u64 = 250;
+    let mut poll_given = false;
     let mut i = 0;
     while i < argv.len() {
         match argv[i].as_str() {
@@ -71,12 +86,24 @@ fn parse_cli(argv: &[String]) -> Result<Cli, String> {
                 let v = argv.get(i).ok_or("missing value for --content")?;
                 contents.push(v.clone());
             }
+            "--watch" => watch = true,
+            "--poll" => {
+                i += 1;
+                let v = argv.get(i).ok_or("missing value for --poll")?;
+                poll_ms = v
+                    .parse::<u64>()
+                    .map_err(|_| format!("invalid --poll value: {v}"))?;
+                poll_given = true;
+            }
             other => return Err(format!("unknown flag: {other}")),
         }
         i += 1;
     }
     let input = input.ok_or("missing required -i/--input")?;
     let output = output.ok_or("missing required -o/--output")?;
+    if poll_given && !watch {
+        return Err("--poll requires --watch".to_string());
+    }
     if !input.is_file() {
         return Err(format!(
             "input file not found: {}",
@@ -102,6 +129,8 @@ fn parse_cli(argv: &[String]) -> Result<Cli, String> {
         input,
         output,
         contents,
+        watch,
+        poll_ms,
     })
 }
 
@@ -116,59 +145,113 @@ fn candidates_to_json(candidates: &[String]) -> String {
     )
 }
 
-/// Compile CSS inside QuickJS. Returns (css, buffered console lines).
-/// Bundle is source-evaled (system qjsc bytecode is version-incompatible).
-fn compile_css(
-    input_css: &str,
-    candidates_json: &str,
-    tailwind_css_text: &str,
-    tw_dir: &str,
-) -> Result<(String, Vec<String>), String> {
-    let rt = Runtime::new().map_err(|e| format!("runtime init failed: {e}"))?;
-    let ctx = Context::full(&rt).map_err(|e| format!("context init failed: {e}"))?;
-    ctx.with(|ctx| -> Result<(String, Vec<String>), String> {
-        ctx.globals()
-            .set("scan", Function::new(ctx.clone(), scan).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
-        ctx.globals()
-            .set(
-                "__tw_read",
-                Function::new(ctx.clone(), tw_read).map_err(|e| e.to_string())?,
-            )
-            .map_err(|e| e.to_string())?;
-        ctx.eval::<(), _>(include_str!("../dist/bundle.js"))
-            .map_err(|e| format!("bundle eval failed: {e}"))?;
-        ctx.globals()
-            .set("__tw_input", input_css.to_string())
-            .map_err(|e| e.to_string())?;
-        ctx.globals()
-            .set("__tw_candidates", candidates_json.to_string())
-            .map_err(|e| e.to_string())?;
-        ctx.globals()
-            .set("__tw_css", tailwind_css_text.to_string())
-            .map_err(|e| e.to_string())?;
-        ctx.globals()
-            .set("__tw_dir", tw_dir.to_string())
-            .map_err(|e| e.to_string())?;
-        let promise: Promise = ctx
-            .eval("TwDriver.build(__tw_input, __tw_candidates, __tw_css, __tw_dir)")
-            .map_err(|e| format!("TwDriver.build eval failed: {e}"))?;
-        let css: String = promise.finish().map_err(|e| {
-            let caught: rquickjs::Value = ctx.catch();
-            let detail = caught
-                .into_object()
-                .and_then(rquickjs::Exception::from_object)
-                .map(|ex| format!("message={:?} stack={:?}", ex.message(), ex.stack()))
-                .unwrap_or_else(|| "non-Error thrown".to_string());
-            format!("TwDriver.build failed: {e} | {detail}")
+/// Persistent QuickJS host: one Runtime + Context, bundle source-evaled once
+/// (system qjsc bytecode is version-incompatible), reused for every rebuild.
+struct Engine {
+    _rt: Runtime,
+    ctx: Context,
+}
+
+impl Engine {
+    fn new() -> Result<Self, String> {
+        let rt = Runtime::new().map_err(|e| format!("runtime init failed: {e}"))?;
+        let ctx = Context::full(&rt).map_err(|e| format!("context init failed: {e}"))?;
+        ctx.with(|ctx| -> Result<(), String> {
+            ctx.globals()
+                .set("scan", Function::new(ctx.clone(), scan).map_err(|e| e.to_string())?)
+                .map_err(|e| e.to_string())?;
+            ctx.globals()
+                .set(
+                    "__tw_read",
+                    Function::new(ctx.clone(), tw_read).map_err(|e| e.to_string())?,
+                )
+                .map_err(|e| e.to_string())?;
+            ctx.eval::<(), _>(include_str!("../dist/bundle.js"))
+                .map_err(|e| format!("bundle eval failed: {e}"))?;
+            Ok(())
         })?;
-        // Flush buffered console lines (daisyUI warnings) for the caller.
-        let logs: Vec<String> = ctx
-            .globals()
-            .get("__tw_log")
-            .unwrap_or_default();
-        Ok((css, logs))
-    })
+        Ok(Engine { _rt: rt, ctx })
+    }
+
+    /// Compile CSS inside QuickJS. Returns (css, buffered console lines).
+    fn compile_css(
+        &self,
+        input_css: &str,
+        candidates_json: &str,
+        tailwind_css_text: &str,
+        tw_dir: &str,
+    ) -> Result<(String, Vec<String>), String> {
+        self.ctx.with(|ctx| -> Result<(String, Vec<String>), String> {
+            ctx.globals()
+                .set("__tw_input", input_css.to_string())
+                .map_err(|e| e.to_string())?;
+            ctx.globals()
+                .set("__tw_candidates", candidates_json.to_string())
+                .map_err(|e| e.to_string())?;
+            ctx.globals()
+                .set("__tw_css", tailwind_css_text.to_string())
+                .map_err(|e| e.to_string())?;
+            ctx.globals()
+                .set("__tw_dir", tw_dir.to_string())
+                .map_err(|e| e.to_string())?;
+            let promise: Promise = ctx
+                .eval("TwDriver.build(__tw_input, __tw_candidates, __tw_css, __tw_dir)")
+                .map_err(|e| format!("TwDriver.build eval failed: {e}"))?;
+            let css: String = promise.finish().map_err(|e| {
+                let caught: rquickjs::Value = ctx.catch();
+                let detail = caught
+                    .into_object()
+                    .and_then(rquickjs::Exception::from_object)
+                    .map(|ex| format!("message={:?} stack={:?}", ex.message(), ex.stack()))
+                    .unwrap_or_else(|| "non-Error thrown".to_string());
+                format!("TwDriver.build failed: {e} | {detail}")
+            })?;
+            // Flush buffered console lines (daisyUI warnings) for the caller.
+            let logs: Vec<String> = ctx
+                .globals()
+                .get("__tw_log")
+                .unwrap_or_default();
+            Ok((css, logs))
+        })
+    }
+}
+
+/// One oxide Scanner per content dir, kept alive across watch rebuilds so the
+/// watched file set can come from the Scanner itself (`get_scanned_files`).
+fn scanner_for(dir: &str) -> Scanner {
+    Scanner::new(vec![PublicSourceEntry {
+        base: dir.to_string(),
+        pattern: "**/*".to_string(),
+        negated: false,
+    }])
+}
+
+fn scan_all_scanners(scanners: &mut [Scanner]) -> Vec<String> {
+    let mut all: Vec<String> = vec![];
+    for s in scanners.iter_mut() {
+        all.extend(s.scan());
+    }
+    all.sort();
+    all.dedup();
+    all
+}
+
+/// Watched files straight from the oxide Scanner (`get_scanned_files` returns
+/// what the last `scan()` actually read), plus the input CSS. Missing files
+/// are skipped gracefully here; mtime comparison treats disappearance as change.
+fn watched_files(scanners: &[Scanner], input: &PathBuf) -> Vec<PathBuf> {
+    let mut files: Vec<PathBuf> = scanners
+        .iter()
+        .flat_map(|s| s.get_scanned_files())
+        .map(PathBuf::from)
+        .collect();
+    files.push(input.clone());
+    files.sort();
+    files.dedup();
+    files
+        .into_iter()
+        .filter(|p| p.is_file())
+        .collect()
 }
 
 fn tailwind_dir() -> Result<String, String> {
@@ -180,14 +263,36 @@ fn tailwind_dir() -> Result<String, String> {
         .map_err(|e| format!("tailwindcss checkout not found at ../tailwindcss: {e}"))
 }
 
-fn scan_all(dirs: &[String]) -> Vec<String> {
-    let mut all: Vec<String> = vec![];
-    for dir in dirs {
-        all.extend(scan(dir.clone()));
-    }
-    all.sort();
-    all.dedup();
-    all
+struct TwEnv {
+    tw_dir: String,
+    tailwind_css_text: String,
+}
+
+fn load_tw_env() -> Result<TwEnv, String> {
+    let tw_dir = tailwind_dir()?;
+    let tailwind_css_text = fs::read_to_string(PathBuf::from(&tw_dir).join("index.css"))
+        .map_err(|e| format!("cannot read tailwindcss/index.css: {e}"))?;
+    Ok(TwEnv {
+        tw_dir,
+        tailwind_css_text,
+    })
+}
+
+/// One scan + QuickJS build; shared by one-shot and watch paths.
+fn build_once(
+    engine: &Engine,
+    scanners: &mut [Scanner],
+    env: &TwEnv,
+    input_css: &str,
+) -> Result<(Vec<String>, String, Vec<String>), String> {
+    let candidates = scan_all_scanners(scanners);
+    let (css, logs) = engine.compile_css(
+        input_css,
+        &candidates_to_json(&candidates),
+        &env.tailwind_css_text,
+        &env.tw_dir,
+    )?;
+    Ok((candidates, css, logs))
 }
 
 fn run_build(cli: &Cli) -> i32 {
@@ -198,29 +303,25 @@ fn run_build(cli: &Cli) -> i32 {
             return 2;
         }
     };
-    let tw_dir = match tailwind_dir() {
-        Ok(d) => d,
+    let env = match load_tw_env() {
+        Ok(e) => e,
         Err(e) => {
             eprintln!("error: {e}");
             return 1;
         }
     };
-    let tailwind_css_text = match fs::read_to_string(PathBuf::from(&tw_dir).join("index.css")) {
-        Ok(s) => s,
+    let engine = match Engine::new() {
+        Ok(e) => e,
         Err(e) => {
-            eprintln!("error: cannot read tailwindcss/index.css: {e}");
+            eprintln!("error: {e}");
             return 1;
         }
     };
-    let candidates = scan_all(&cli.contents);
-    println!("[tw] candidates {} {candidates:?}", candidates.len());
-    match compile_css(
-        &input_css,
-        &candidates_to_json(&candidates),
-        &tailwind_css_text,
-        &tw_dir,
-    ) {
-        Ok((css, logs)) => {
+    let mut scanners: Vec<Scanner> =
+        cli.contents.iter().map(|d| scanner_for(d)).collect();
+    match build_once(&engine, &mut scanners, &env, &input_css) {
+        Ok((candidates, css, logs)) => {
+            println!("[tw] candidates {} {candidates:?}", candidates.len());
             for line in &logs {
                 eprintln!("[tw-log] {line}");
             }
@@ -240,6 +341,125 @@ fn run_build(cli: &Cli) -> i32 {
             eprintln!("error: build failed: {e}");
             1
         }
+    }
+}
+
+use std::collections::HashMap;
+use std::time::{Duration, Instant, SystemTime};
+
+/// mtime (+size tiebreak) snapshot of the watched set. Unreadable files are
+/// simply absent; disappearance therefore shows up as a change.
+fn snapshot(files: &[PathBuf]) -> HashMap<PathBuf, (SystemTime, u64)> {
+    files
+        .iter()
+        .filter_map(|p| {
+            fs::metadata(p).ok().and_then(|m| {
+                m.modified()
+                    .ok()
+                    .map(|t| (p.clone(), (t, m.len())))
+            })
+        })
+        .collect()
+}
+
+fn run_watch(cli: &Cli) -> i32 {
+    let env = match load_tw_env() {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("error: {e}");
+            return 1;
+        }
+    };
+    let engine = match Engine::new() {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("error: {e}");
+            return 1;
+        }
+    };
+    let mut scanners: Vec<Scanner> =
+        cli.contents.iter().map(|d| scanner_for(d)).collect();
+
+    // Initial build, exactly like the one-shot path.
+    let input_css = match fs::read_to_string(&cli.input) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("error: cannot read input {}: {e}", cli.input.to_string_lossy());
+            return 2;
+        }
+    };
+    let mut last_css = match build_once(&engine, &mut scanners, &env, &input_css) {
+        Ok((candidates, css, logs)) => {
+            println!("[tw] candidates {} {candidates:?}", candidates.len());
+            for line in &logs {
+                eprintln!("[tw-log] {line}");
+            }
+            if let Err(e) = fs::write(&cli.output, &css) {
+                eprintln!("error: cannot write {}: {e}", cli.output.to_string_lossy());
+                return 1;
+            }
+            println!("[tw] wrote {} ({} bytes)", cli.output.to_string_lossy(), css.len());
+            css
+        }
+        Err(e) => {
+            eprintln!("error: initial build failed: {e}");
+            return 1;
+        }
+    };
+
+    let mut files = watched_files(&scanners, &cli.input);
+    let mut snap = snapshot(&files);
+    eprintln!(
+        "[watch] watching {} files (poll {}ms); Ctrl-C to stop",
+        files.len(),
+        cli.poll_ms
+    );
+    loop {
+        std::thread::sleep(Duration::from_millis(cli.poll_ms));
+        if snapshot(&files) == snap {
+            continue;
+        }
+        let started = Instant::now();
+        // Input may have been deleted mid-watch: warn and keep watching.
+        let input_css = match fs::read_to_string(&cli.input) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!(
+                    "[watch] cannot read input {}: {e} (keeping watch)",
+                    cli.input.to_string_lossy()
+                );
+                snap = snapshot(&files);
+                continue;
+            }
+        };
+        match build_once(&engine, &mut scanners, &env, &input_css) {
+            Ok((candidates, css, logs)) => {
+                for line in &logs {
+                    eprintln!("[tw-log] {line}");
+                }
+                if css != last_css {
+                    if let Err(e) = fs::write(&cli.output, &css) {
+                        eprintln!(
+                            "[watch] cannot write {}: {e} (keeping watch)",
+                            cli.output.to_string_lossy()
+                        );
+                    } else {
+                        println!(
+                            "[tw] rewrote {} ({} bytes, {} candidates)",
+                            cli.output.to_string_lossy(),
+                            css.len(),
+                            candidates.len()
+                        );
+                        last_css = css;
+                    }
+                }
+            }
+            Err(e) => eprintln!("[watch] build failed (keeping watch): {e}"),
+        }
+        // Refresh the watched set (scans can discover new files) and re-baseline.
+        files = watched_files(&scanners, &cli.input);
+        snap = snapshot(&files);
+        eprintln!("[watch] Done in {}ms", started.elapsed().as_millis());
     }
 }
 
@@ -306,7 +526,8 @@ fn run_self_test() -> i32 {
     let input_css = fs::read_to_string(fixture.join("input.css")).expect("input.css");
     let tailwind_css_text =
         fs::read_to_string(PathBuf::from(&tw_dir).join("index.css")).expect("index.css");
-    match compile_css(
+    let engine = Engine::new().expect("engine");
+    match engine.compile_css(
         &input_css,
         &candidates_to_json(&direct),
         &tailwind_css_text,
@@ -338,7 +559,13 @@ fn main() {
         std::process::exit(run_self_test());
     }
     match parse_cli(&argv) {
-        Ok(cli) => std::process::exit(run_build(&cli)),
+        Ok(cli) => {
+            if cli.watch {
+                std::process::exit(run_watch(&cli))
+            } else {
+                std::process::exit(run_build(&cli))
+            }
+        }
         Err(e) => {
             eprintln!("error: {e}\n\n{USAGE}");
             std::process::exit(2);
