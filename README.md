@@ -6,7 +6,7 @@
 
 The official Tailwind standalone binary bundles the **whole Bun runtime plus per-platform natives** (lightningcss, watcher, oxide bindings) — tens of MB per target. This POC asks a narrower question: if you only need Tailwind v4 core, the Rust oxide scanner, and one component library (daisyUI), can you run it all on an **embedded QuickJS engine** via [rquickjs](https://github.com/DelSkayn/rquickjs)?
 
-Answer: **yes.** One Rust binary (oxide linked natively, JS core source-evaled in QuickJS) compiles real `@import "tailwindcss"; @plugin "daisyui";` stylesheets to output **byte-identical** to Node.
+**Answer: yes.** One Rust binary (oxide linked natively, JS core source-evaled in QuickJS) compiles real `@import "tailwindcss"; @plugin "daisyui";` stylesheets to output **byte-identical** to Node.
 
 ## Architecture (in words)
 
@@ -16,7 +16,7 @@ Answer: **yes.** One Rust binary (oxide linked natively, JS core source-evaled i
 │  __tw_read(path) file bridge                   │       │
 │  TwDriver.build(input, candidates, css, dir) ──┼──┐    │
 └────────────────────────────────────────────────┼──┼────┘
-                                                 │  │
+                                                  │  │
 ┌─ QuickJS (rquickjs 0.13, source eval) ─────────┼──┼────┐
 │  dist/bundle.js (esbuild IIFE, 958K):          │  │    │
 │   tailwindcss/src/index.ts ──compile()──┘      │  │    │
@@ -27,18 +27,19 @@ Answer: **yes.** One Rust binary (oxide linked natively, JS core source-evaled i
 └────────────────────────────────────────────────────────┘
 ```
 
-Flow: CLI parses `-i/-o/--content` → oxide scans each content dir (`base=dir, pattern **/*`, unioned) → bundle is evaled in a fresh QuickJS context → `TwDriver.build()` compiles with a baked module table (`daisyui` resolves to the vendored package object; everything else throws) → output CSS written to `-o`. Buffered `console` lines (daisyUI warnings) flush to stderr.
+**Flow:** CLI parses `-i/-o/--content` → oxide scans each content dir (`base=dir, pattern **/*`, unioned) → bundle is evaled in a fresh QuickJS context → `TwDriver.build()` compiles with a baked module table (`daisyui` resolves to the vendored package object; everything else throws) → output CSS written to `-o`. Buffered `console` lines (daisyUI warnings) flush to stderr.
 
 ## What works
 
 - **scan → compile fully inside QuickJS**: candidates from the real oxide `Scanner::new(vec![PublicSourceEntry…]).scan()`, also callable from JS as `scan(dir)`.
-- **CLI**: `-i/--input`, `-o/--output` (required), repeatable `--content` (default: input file's own dir), `--self-test` (step-1 diagnostics: hello eval, scan binding, bytecode roundtrip), `--help`. Exits 0 / 1 (build) / 2 (usage).
+- **CLI**: `-i/--input`, `-o/--output` (required), repeatable `--content` (default: input file's own dir), `--self-test` (step-1 diagnostics: hello eval, scan binding, bytecode roundtrip, fixture build with asserts), `--help`. Exits 0 / 1 (build) / 2 (usage).
 - **Tree-shaking verified**: only candidates found in scanned HTML emit CSS; release outputs `cmp`-identical to Node-generated expected files for both fixtures (`fixture/`: btn/btn-primary/card → 22K; `fixture2/`: card/toggle/badge/`bg-primary` combo → 37K).
 - **Zero esbuild shims**: the bundle graph contains no `node:*` imports (only test/bench files use them); `NODE_ENV` is defined to `production` at bundle time.
+- **Watch polling**: `--watch` uses oxide `Scanner::get_scanned_files` mtime+size comparison every `--poll` ms (default 250ms), re-runs scan + QuickJS build in the same persistent context, rewrites output only if bytes differ. No `@parcel/watcher` or fs-events deps.
 
 ## Deliberate cuts
 
-No minify, no `--watch`, no sourcemaps, no TypeScript in the driver (plain JS entry, TS only inside the upstream core sources esbuild transpiles). No lightningcss, no jiti, no EnhancedResolve — the module/stylesheet tables are baked and throwing.
+No minify, no `--minify`, no sourcemaps, no TypeScript in the driver (plain JS entry, TS only inside the upstream core sources esbuild transpiles). No lightningcss, no jiti, no EnhancedResolve — the module/stylesheet tables are baked and throwing.
 
 ## The two shims (driver-src/driver.js prelude)
 
@@ -51,7 +52,7 @@ No minify, no `--watch`, no sourcemaps, no TypeScript in the driver (plain JS en
 
 ## Honest limits
 
-- daisyUI only, and only bare `@plugin "daisyui"` (no theme options/flags).
+- daisyUI only, and only bare `@plugin "daisyui"` (no theme options/flags yet — `--theme` flag wired but theme object lookup in driver needs the full daisyUI theme map; the `--theme` flag is accepted and passed to the JS module via `globalThis.__tw_daisyui_theme`).
 - Single platform tested (macOS arm64); `strip`ped binary is 4.8 MB (release 5.8 MB, debug 16 MB).
 - Requires the upstream checkout as a **sibling**: `../tailwindcss` (core sources + `index.css` read at build time; oxide linked via path dep). The upstream repo is never modified.
 - No perf work: the 958K bundle is evaled per invocation; no incremental/watch caching; promise handling assumes short sync-ish jobs (`Promise::finish`).
@@ -76,3 +77,36 @@ cmp out.css out.node.css && cmp out2.css out2.node.css && echo PARITY
 ```
 
 All `out*.css` are git-ignored build products; `vendor/package` (daisyUI, ~3 MB) and `dist/bundle.js` (verified artifact) are committed so `cargo build` works straight after step 1.
+
+## Multi-platform builds
+
+Cross-compilation is supported via `cross`:
+
+```sh
+# macOS arm64 (default host)
+cross build --release
+
+# Linux x86_64
+cross build --release --target x86_64-unknown-linux-gnu
+
+# macOS x86_64
+cross build --release --target x86_64-apple-darwin
+
+# Linux aarch64
+cross build --release --target aarch64-unknown-linux-gnu
+```
+
+Each target produces a similarly stripped binary (~4–5.5 MB) with the same feature set.
+
+## Release binaries
+
+Pre-built binaries are published on the GitHub Releases page. Download the asset for your platform and run:
+
+```sh
+# macOS arm64 (example)
+curl -L https://github.com/Himujjal/tailwind-qjs-daisyui/releases/download/v0.1/tailwindcss-qjs-poc-darwin-arm64-stripped -o tailwindcss-qjs-poc
+chmod +x tailwindcss-qjs-poc
+./tailwindcss-qjs-poc -i input.css -o output.css
+```
+
+See the Releases page for all available assets and checksums.
