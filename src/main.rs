@@ -59,6 +59,7 @@ struct Cli {
     contents: Vec<String>,
     watch: bool,
     poll_ms: u64,
+    theme: String,
 }
 
 fn parse_cli(argv: &[String]) -> Result<Cli, String> {
@@ -68,6 +69,7 @@ fn parse_cli(argv: &[String]) -> Result<Cli, String> {
     let mut watch = false;
     let mut poll_ms: u64 = 250;
     let mut poll_given = false;
+    let mut theme = String::new();
     let mut i = 0;
     while i < argv.len() {
         match argv[i].as_str() {
@@ -94,6 +96,14 @@ fn parse_cli(argv: &[String]) -> Result<Cli, String> {
                     .parse::<u64>()
                     .map_err(|_| format!("invalid --poll value: {v}"))?;
                 poll_given = true;
+            }
+            "--theme" => {
+                if i + 1 < argv.len() {
+                    theme = argv.get(i + 1).cloned().unwrap_or_default();
+                    i += 1; // skip the value so the outer i += 1 doesn't double-consume
+                } else {
+                    return Err("missing value for --theme".to_string());
+                }
             }
             other => return Err(format!("unknown flag: {other}")),
         }
@@ -131,6 +141,7 @@ fn parse_cli(argv: &[String]) -> Result<Cli, String> {
         contents,
         watch,
         poll_ms,
+        theme,
     })
 }
 

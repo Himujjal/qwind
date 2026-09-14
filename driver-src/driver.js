@@ -78,8 +78,12 @@ function joinPath(base, rel) {
   return '/' + out.join('/')
 }
 
-async function build(inputCss, candidatesJson, tailwindCssText, twCssDir) {
+async function build(inputCss, candidatesJson, tailwindCssText, twCssDir, theme) {
   const candidates = JSON.parse(candidatesJson)
+
+  // Pass theme name to the daisyUI module via a global the plugin reads.
+  // daemonUI's pluginOptionsHandler reads `globalThis.__tw_daisyui_theme`.
+  globalThis.__tw_daisyui_theme = theme || 'light'
 
   async function loadModule(id, base, resourceHint) {
     if (id === 'daisyui') {
