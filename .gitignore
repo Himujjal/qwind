@@ -4,3 +4,6 @@ out*.css
 *.tgz
 hello_bytecode.c
 hello_qjsc.bin
+demo-vite/node_modules/
+demo-vite/dist/
+demo-vite/package-lock.json
