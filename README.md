@@ -1,4 +1,4 @@
-# tailwind-qjs-daisyui
+# qwind
 
 **Experiment: Tailwind CSS v4 core + oxide Scanner + ONLY daisyUI, running on embedded QuickJS — in a 4.8 MB stripped binary with byte-identical CSS vs Node.**
 
@@ -6,7 +6,7 @@
 
 The official Tailwind standalone binary bundles the **whole Bun runtime plus per-platform natives** (lightningcss, watcher, oxide bindings) — tens of MB per target. This POC asks a narrower question: if you only need Tailwind v4 core, the Rust oxide scanner, and one component library (daisyUI), can you run it all on an **embedded QuickJS engine** via [rquickjs](https://github.com/DelSkayn/rquickjs)?
 
-**Answer: yes.** One Rust binary (oxide linked natively, JS core source-evaled in QuickJS) compiles real `@import "tailwindcss"; @plugin "daisyui";` stylesheets to output **byte-identical** to Node.
+**Answer: yes.** One Rust binary (oxide linked natively, JS core source-evaled in QuickJS) compiles real `@import "tailwindcss"; @plugin "daisyui";` stylesheets to output **byte-identical** to Node. daisyUI is baked into the bundle; the binary needs no Node runtime.
 
 ## Architecture (in words)
 
@@ -32,7 +32,7 @@ The official Tailwind standalone binary bundles the **whole Bun runtime plus per
 ## What works
 
 - **scan → compile fully inside QuickJS**: candidates from the real oxide `Scanner::new(vec![PublicSourceEntry…]).scan()`, also callable from JS as `scan(dir)`.
-- **CLI**: `-i/--input`, `-o/--output` (required), repeatable `--content` (default: input file's own dir), `--self-test` (step-1 diagnostics: hello eval, scan binding, bytecode roundtrip, fixture build with asserts), `--help`. Exits 0 / 1 (build) / 2 (usage).
+- **CLI**: `-i/--input`, `-o/--output` (required), repeatable `--content` (default: input file's parent dir), `--watch`, `--poll`, experimental `--theme`, `--self-test` (diagnostics), `-h/--help`. Exit codes: 0 success, 1 build failure, 2 usage/CLI error.
 - **Tree-shaking verified**: only candidates found in scanned HTML emit CSS; release outputs `cmp`-identical to Node-generated expected files for both fixtures (`fixture/`: btn/btn-primary/card → 22K; `fixture2/`: card/toggle/badge/`bg-primary` combo → 37K).
 - **Zero esbuild shims**: the bundle graph contains no `node:*` imports (only test/bench files use them); `NODE_ENV` is defined to `production` at bundle time.
 - **Watch polling**: `--watch` uses oxide `Scanner::get_scanned_files` mtime+size comparison every `--poll` ms (default 250ms), re-runs scan + QuickJS build in the same persistent context, rewrites output only if bytes differ. No `@parcel/watcher` or fs-events deps.
@@ -52,20 +52,47 @@ No minify, no `--minify`, no sourcemaps, no TypeScript in the driver (plain JS e
 
 ## Honest limits
 
-- daisyUI only, and only bare `@plugin "daisyui"` (no theme options/flags yet — `--theme` flag wired but theme object lookup in driver needs the full daisyUI theme map; the `--theme` flag is accepted and passed to the JS module via `globalThis.__tw_daisyui_theme`).
+- daisyUI only, and only bare `@plugin "daisyui"`. `--theme <name>` is experimental/no-op: the CLI accepts it, but the Rust host does not yet forward it to JS (`__tw_daisyui_theme`); the full daisyUI theme map is not implemented.
 - Single platform tested (macOS arm64); `strip`ped binary is 4.8 MB (release 5.8 MB, debug 16 MB).
 - Tailwind core and oxide are pinned file-copy snapshots in `vendor/`; the standalone binary embeds the stylesheet and bundle, and does not need a checkout at runtime.
 - No perf work: the 958K bundle is evaled per invocation; no incremental/watch caching; promise handling assumes short sync-ish jobs (`Promise::finish`).
 
-## Reproduce
+## Prerequisites and quickstart
+
+Rust edition 2024 with rustc >= 1.88 is required by the vendored `ignore` crate. Tested with rustc 1.97.1 and Node v26.7.0 on macOS arm64. Node/npm is only needed for tests and bundle rebuilds, not for building or running the binary from the checked-in bundle.
 
 ```sh
-git clone <this-repo> tailwind-qjs-daisyui && cd tailwind-qjs-daisyui
+git clone https://github.com/Himujjal/qwind.git
+cd qwind
+npm install # only needed for tests or rebuilding dist/bundle.js
 cargo build --release
-# Standalone verification (no ../tailwindcss checkout is needed):
-./target/release/tailwindcss-qjs-poc -i fixture/input.css -o out.css --content fixture
-# To run elsewhere, use absolute paths for the binary, input, output, and content dir.
+./target/release/qwind -i fixture-tsx/input.css -o output.css --content fixture-tsx
 ```
+
+A complete `input.css` for Tailwind and daisyUI is:
+
+```css
+@import "tailwindcss";
+@plugin "daisyui";
+```
+
+The compiled `output.css` is a generated file; use absolute paths for the binary, input, output and content directory when running outside the checkout.
+
+### CLI
+
+```text
+qwind -i <input.css> -o <output.css> [--content <dir> ...] [--watch [--poll <ms>]] [--theme <name>]
+```
+
+`-i/--input` and `-o/--output` are required. Repeat `--content <dir>` to scan multiple directories; by default the input CSS file's parent directory is scanned. `--watch` rebuilds on changes using polling; `--poll <ms>` sets the interval (default 250 ms) and requires `--watch`. `--theme <name>` is experimental/no-op: accepted by the CLI but not forwarded to JS (`__tw_daisyui_theme`) yet, and the full daisyUI theme map is missing. `--self-test` runs diagnostics; `-h/--help` prints full usage. Exit codes: 0 success, 1 build failure, 2 usage/CLI error.
+
+### Fixtures
+
+| Directory | Coverage |
+| --- | --- |
+| `fixture/` | Basic HTML utilities and daisyUI btn/card |
+| `fixture2/` | daisyUI card/toggle/badge and `bg-primary` combos |
+| `fixture-tsx/` | TSX class scanning and daisyUI components |
 
 `vendor/tailwindcss/` and `vendor/crates/` contain a pinned Tailwind/oxide snapshot; `vendor/package/` contains pinned daisyUI. `dist/bundle.js` is generated from these vendored sources. All are included in the repository, so neither build nor runtime requires `../tailwindcss`. The CSS entry files and JS bundle are embedded in the binary. `out*.css` are git-ignored build products.
 
@@ -99,9 +126,9 @@ Pre-built binaries are published on the GitHub Releases page. Download the asset
 
 ```sh
 # macOS arm64 (example)
-curl -L https://github.com/Himujjal/tailwind-qjs-daisyui/releases/download/v0.1/tailwindcss-qjs-poc-darwin-arm64-stripped -o tailwindcss-qjs-poc
-chmod +x tailwindcss-qjs-poc
-./tailwindcss-qjs-poc -i input.css -o output.css
+curl -L https://github.com/Himujjal/qwind/releases/download/v0.1/qwind-darwin-arm64-stripped -o qwind
+chmod +x qwind
+./qwind -i input.css -o output.css
 ```
 
 See the Releases page for all available assets and checksums.

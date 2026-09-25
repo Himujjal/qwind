@@ -3,7 +3,7 @@ set -eu
 
 cd "$(dirname "$0")/.."
 
-if [ ! -x target/debug/tailwindcss-qjs-poc ]; then
+if [ ! -x target/debug/qwind ]; then
   cargo build
 fi
 
@@ -11,7 +11,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 output="$tmp/output.css"
 
-./target/debug/tailwindcss-qjs-poc -i fixture-tsx/input.css -o "$output" --content fixture-tsx
+./target/debug/qwind -i fixture-tsx/input.css -o "$output" --content fixture-tsx
 printf 'PASS: TSX CLI compile and oxide content scan\n'
 
 for selector in '.btn {' '.btn-primary {' '.text-xl {' '.font-bold {' '.card {' '.badge {' '.bg-primary {' '--color-primary'; do

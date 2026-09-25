@@ -26,12 +26,12 @@ fn tw_read(path: String) -> std::result::Result<String, std::io::Error> {
 }
 
 const USAGE: &str = "\
-tailwindcss-qjs-poc: compile Tailwind v4 + daisyUI inside QuickJS (POC)
+qwind: compile Tailwind v4 + daisyUI inside QuickJS (POC)
 
 Usage:
-  tailwindcss-qjs-poc -i <input.css> -o <output.css> [--content <dir> ...] [--watch [--poll <ms>]]
-  tailwindcss-qjs-poc --self-test
-  tailwindcss-qjs-poc --help
+  qwind -i <input.css> -o <output.css> [--content <dir> ...] [--watch [--poll <ms>]] [--theme <name>]
+  qwind --self-test
+  qwind --help
 
 Options:
   -i, --input <file>     Input CSS (`@import \"tailwindcss\"; @plugin \"daisyui\";`). Required.
@@ -43,6 +43,8 @@ Options:
                          Ctrl-C just kills the process (no handler).
   --poll <ms>            Poll interval for --watch (default 250, matching
                          upstream). Rejected without --watch.
+  --theme <name>         Experimental/no-op: accepted but not yet forwarded to
+                         JS (__tw_daisyui_theme); full daisyUI theme map missing.
   --self-test            Run the step 1 + 2 diagnostics (hello eval, scan binding,
                          bytecode roundtrip, fixture build with asserts).
   -h, --help             Print this usage.

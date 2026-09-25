@@ -3,10 +3,10 @@ set -eu
 
 cd "$(dirname "$0")/.."
 
-if [ ! -x target/debug/tailwindcss-qjs-poc ]; then
+if [ ! -x target/debug/qwind ]; then
   cargo build
 fi
-bin=./target/debug/tailwindcss-qjs-poc
+bin=./target/debug/qwind
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 

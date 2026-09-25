@@ -1,7 +1,8 @@
 [package]
-name = "tailwindcss-qjs-poc"
+name = "qwind"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
 
 [dependencies]
 rquickjs = { version = "0.13.0", features = ["macro", "loader"] }

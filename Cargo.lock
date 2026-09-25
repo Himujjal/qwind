@@ -340,6 +340,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "qwind"
+version = "0.1.0"
+dependencies = [
+ "rquickjs",
+ "tailwindcss-oxide",
+]
+
+[[package]]
 name = "rayon"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -549,14 +557,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "walkdir",
-]
-
-[[package]]
-name = "tailwindcss-qjs-poc"
-version = "0.1.0"
-dependencies = [
- "rquickjs",
- "tailwindcss-oxide",
 ]
 
 [[package]]

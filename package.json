@@ -1,7 +1,8 @@
 {
-  "name": "tailwind-qjs-daisyui",
+  "name": "qwind",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "POC: Tailwind CSS v4 core + oxide scanner + daisyUI running on embedded QuickJS (rquickjs)",
   "scripts": {
     "build:bundle": "esbuild driver-src/driver.js --bundle --format=iife --platform=neutral --external:node:* --define:process.env.NODE_ENV=\\\"production\\\" --outfile=dist/bundle.js --log-level=info",
