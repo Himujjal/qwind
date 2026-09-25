@@ -17,7 +17,12 @@ fn scan(dir: String) -> Vec<String> {
 /// Returns io::Error directly: rquickjs converts it into a JS exception
 /// (`IntoJs for Result<T, E> where Error: From<E>`).
 fn tw_read(path: String) -> std::result::Result<String, std::io::Error> {
-    fs::read_to_string(&path)
+    match path.as_str() {
+        "/vendor/tailwindcss/theme.css" => Ok(include_str!("../vendor/tailwindcss/theme.css").to_string()),
+        "/vendor/tailwindcss/preflight.css" => Ok(include_str!("../vendor/tailwindcss/preflight.css").to_string()),
+        "/vendor/tailwindcss/utilities.css" => Ok(include_str!("../vendor/tailwindcss/utilities.css").to_string()),
+        _ => fs::read_to_string(&path),
+    }
 }
 
 const USAGE: &str = "\
@@ -49,8 +54,8 @@ re-run in the same persistent context and the output is rewritten only if
 bytes differ. Polling, not fs-events — no extra deps.
 
 Exit codes: 0 ok, 1 build failure, 2 usage/CLI error.
-POC limits: tailwindcss checkout expected at ../tailwindcss relative to cwd;
-no minify, no sourcemaps.\
+Standalone binary: no Tailwind checkout required at runtime.
+POC limits: no minify, no sourcemaps.\
 ";
 
 struct Cli {
@@ -265,28 +270,19 @@ fn watched_files(scanners: &[Scanner], input: &PathBuf) -> Vec<PathBuf> {
         .collect()
 }
 
-fn tailwind_dir() -> Result<String, String> {
-    let dir = std::env::current_dir()
-        .map_err(|e| format!("cannot get cwd: {e}"))?
-        .join("../tailwindcss/packages/tailwindcss");
-    dir.canonicalize()
-        .map(|p| p.to_string_lossy().to_string())
-        .map_err(|e| format!("tailwindcss checkout not found at ../tailwindcss: {e}"))
-}
+const TW_CSS_DIR: &str = "/vendor/tailwindcss";
+const TAILWIND_CSS_TEXT: &str = include_str!("../vendor/tailwindcss/index.css");
 
 struct TwEnv {
-    tw_dir: String,
-    tailwind_css_text: String,
+    tw_dir: &'static str,
+    tailwind_css_text: &'static str,
 }
 
-fn load_tw_env() -> Result<TwEnv, String> {
-    let tw_dir = tailwind_dir()?;
-    let tailwind_css_text = fs::read_to_string(PathBuf::from(&tw_dir).join("index.css"))
-        .map_err(|e| format!("cannot read tailwindcss/index.css: {e}"))?;
-    Ok(TwEnv {
-        tw_dir,
-        tailwind_css_text,
-    })
+fn load_tw_env() -> TwEnv {
+    TwEnv {
+        tw_dir: TW_CSS_DIR,
+        tailwind_css_text: TAILWIND_CSS_TEXT,
+    }
 }
 
 /// One scan + QuickJS build; shared by one-shot and watch paths.
@@ -314,13 +310,7 @@ fn run_build(cli: &Cli) -> i32 {
             return 2;
         }
     };
-    let env = match load_tw_env() {
-        Ok(e) => e,
-        Err(e) => {
-            eprintln!("error: {e}");
-            return 1;
-        }
-    };
+    let env = load_tw_env();
     let engine = match Engine::new() {
         Ok(e) => e,
         Err(e) => {
@@ -374,13 +364,7 @@ fn snapshot(files: &[PathBuf]) -> HashMap<PathBuf, (SystemTime, u64)> {
 }
 
 fn run_watch(cli: &Cli) -> i32 {
-    let env = match load_tw_env() {
-        Ok(e) => e,
-        Err(e) => {
-            eprintln!("error: {e}");
-            return 1;
-        }
-    };
+    let env = load_tw_env();
     let engine = match Engine::new() {
         Ok(e) => e,
         Err(e) => {
@@ -527,22 +511,14 @@ fn run_self_test() -> i32 {
     }
     println!("[direct] candidates = {direct:?}");
 
-    let tw_dir = match tailwind_dir() {
-        Ok(d) => d,
-        Err(e) => {
-            eprintln!("error: {e}");
-            return 1;
-        }
-    };
+    let env = load_tw_env();
     let input_css = fs::read_to_string(fixture.join("input.css")).expect("input.css");
-    let tailwind_css_text =
-        fs::read_to_string(PathBuf::from(&tw_dir).join("index.css")).expect("index.css");
     let engine = Engine::new().expect("engine");
     match engine.compile_css(
         &input_css,
         &candidates_to_json(&direct),
-        &tailwind_css_text,
-        &tw_dir,
+        env.tailwind_css_text,
+        env.tw_dir,
     ) {
         Ok((css, logs)) => {
             for line in &logs {

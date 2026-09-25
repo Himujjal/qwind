@@ -1,22 +1,21 @@
 #!/bin/sh
-# Fetch + vendor the JS-side dependencies for tailwind-qjs-daisyui.
-# Layout assumed: <parent>/tailwindcss  (upstream checkout, untouched)
-#                 <parent>/tailwind-qjs-daisyui (this repo)
+# Refresh the pinned daisyUI package without removing the Tailwind/oxide snapshot.
 set -eu
 cd "$(dirname "$0")/.."
 
-if [ ! -d ../tailwindcss/packages/tailwindcss ]; then
-  echo "error: expected upstream checkout at ../tailwindcss (sibling of this repo)" >&2
+if [ ! -d vendor/tailwindcss/src ] || [ ! -d vendor/crates/oxide ]; then
+  echo "error: missing vendored Tailwind sources or oxide crate; see vendor/VENDOR.md" >&2
   exit 1
 fi
 
-echo "==> packing daisyui@5"
-npm pack daisyui@5
-rm -rf vendor
-mkdir -p vendor
-tar -xzf daisyui-5.*.tgz -C vendor
-rm -f daisyui-5.*.tgz
-echo "==> vendored $(node -p "require('./vendor/package/package.json').version" 2>/dev/null || cat vendor/package/package.json | grep '"version"')"
+DAISYUI_VERSION=5.7.37
+echo "==> packing daisyui@$DAISYUI_VERSION"
+npm pack "daisyui@$DAISYUI_VERSION"
+rm -rf vendor/package
+# npm pack extracts its package/ directory beneath vendor/.
+tar -xzf "daisyui-$DAISYUI_VERSION.tgz" -C vendor
+rm -f "daisyui-$DAISYUI_VERSION.tgz"
+echo "==> vendored daisyui@$(node -p "require('./vendor/package/package.json').version")"
 
 echo "==> installing dev dependencies (esbuild)"
 npm install

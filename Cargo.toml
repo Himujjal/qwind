@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 rquickjs = { version = "0.13.0", features = ["macro", "loader"] }
-tailwindcss-oxide = { version = "0.1.0", path = "../tailwindcss/crates/oxide" }
+tailwindcss-oxide = { version = "0.1.0", path = "vendor/crates/oxide" }

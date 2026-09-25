@@ -1,8 +1,8 @@
 (() => {
-  // ../tailwindcss/packages/tailwindcss/package.json
+  // vendor/tailwindcss/package.json
   var version = "4.3.3";
 
-  // ../tailwindcss/packages/tailwindcss/src/selector-parser.ts
+  // vendor/tailwindcss/src/selector-parser.ts
   function combinator(value2) {
     return {
       kind: "combinator",
@@ -407,7 +407,7 @@
     return ast;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/source-maps/line-table.ts
+  // vendor/tailwindcss/src/source-maps/line-table.ts
   var LINE_BREAK = 10;
   function createLineTable(source) {
     let table = [0];
@@ -449,7 +449,7 @@
     };
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/css-parser.ts
+  // vendor/tailwindcss/src/css-parser.ts
   var BACKSLASH2 = 92;
   var SLASH = 47;
   var ASTERISK2 = 42;
@@ -778,7 +778,7 @@
     return startIdx;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/escape.ts
+  // vendor/tailwindcss/src/utils/escape.ts
   function escape(value2) {
     if (arguments.length === 0) {
       throw new TypeError("`CSS.escape` requires an argument.");
@@ -841,7 +841,7 @@
     });
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/theme.ts
+  // vendor/tailwindcss/src/theme.ts
   var ignoredThemeKeyMap = /* @__PURE__ */ new Map([
     ["--font", ["--font-weight", "--font-size"]],
     ["--inset", ["--inset-shadow", "--inset-ring"]],
@@ -1054,7 +1054,7 @@
     }
   };
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/default-map.ts
+  // vendor/tailwindcss/src/utils/default-map.ts
   var DefaultMap = class extends Map {
     constructor(factory) {
       super();
@@ -1071,7 +1071,7 @@
     }
   };
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/segment.ts
+  // vendor/tailwindcss/src/utils/segment.ts
   var BACKSLASH3 = 92;
   var OPEN_CURLY2 = 123;
   var CLOSE_CURLY2 = 125;
@@ -1139,7 +1139,7 @@
     return parts;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/value-parser.ts
+  // vendor/tailwindcss/src/value-parser.ts
   function word(value2) {
     return {
       kind: "word",
@@ -1339,7 +1339,7 @@
     return ast;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/walk.ts
+  // vendor/tailwindcss/src/walk.ts
   var WalkKind = /* @__PURE__ */ ((WalkKind2) => {
     WalkKind2[WalkKind2["Continue"] = 0] = "Continue";
     WalkKind2[WalkKind2["Skip"] = 1] = "Skip";
@@ -1473,7 +1473,7 @@
     }
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/variables.ts
+  // vendor/tailwindcss/src/utils/variables.ts
   var extractUsedVariablesCache = new DefaultMap((raw) => {
     let variables = [];
     walk(parse3(raw), (node) => {
@@ -1490,7 +1490,7 @@
     return extractUsedVariablesCache.get(raw);
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/ast.ts
+  // vendor/tailwindcss/src/ast.ts
   var AT_SIGN2 = 64;
   var PIPE = 124;
   function styleRule(selector2, nodes = []) {
@@ -1918,19 +1918,18 @@
     let parseSelectorCache = new DefaultMap(parse);
     let containsAtScope = /* @__PURE__ */ new Set();
     {
-      let scan2 = function(nodes2) {
+      let scan = function(nodes2) {
         let found = false;
         for (let node of nodes2) {
           if (node.kind === "declaration" || node.kind === "comment") continue;
-          if (scan2(node.nodes) || node.kind === "at-rule" && node.name === "@scope") {
+          if (scan(node.nodes) || node.kind === "at-rule" && node.name === "@scope") {
             containsAtScope.add(node);
             found = true;
           }
         }
         return found;
       };
-      var scan = scan2;
-      scan2(ast);
+      scan(ast);
     }
     let selectorStack = [];
     let atRuleStack = [];
@@ -2431,7 +2430,7 @@
     return value2.split(/[\s,]+/);
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/math-operators.ts
+  // vendor/tailwindcss/src/utils/math-operators.ts
   var LOWER_A = 97;
   var LOWER_Z = 122;
   var UPPER_A = 65;
@@ -2558,7 +2557,7 @@
     return result;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/decode-arbitrary-value.ts
+  // vendor/tailwindcss/src/utils/decode-arbitrary-value.ts
   function decodeArbitraryValue(input) {
     if (input.indexOf("(") === -1) {
       return convertUnderscoresToWhitespace(input);
@@ -2621,7 +2620,7 @@
     throw new Error(`Unexpected value: ${value2}`);
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/is-valid-arbitrary.ts
+  // vendor/tailwindcss/src/utils/is-valid-arbitrary.ts
   var BACKSLASH5 = 92;
   var OPEN_CURLY3 = 123;
   var CLOSE_CURLY3 = 125;
@@ -2683,7 +2682,7 @@
     return true;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/candidate.ts
+  // vendor/tailwindcss/src/candidate.ts
   var COLON4 = 58;
   var DASH2 = 45;
   var LOWER_A2 = 97;
@@ -3271,7 +3270,7 @@
     return value2.replaceAll("_", String.raw`\_`).replaceAll(" ", "_");
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/compare-breakpoints.ts
+  // vendor/tailwindcss/src/utils/compare-breakpoints.ts
   function compareBreakpoints(a, z, direction) {
     if (a === z) return 0;
     let aIsCssFunction = a.indexOf("(");
@@ -3301,7 +3300,7 @@
     return order;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/dimensions.ts
+  // vendor/tailwindcss/src/utils/dimensions.ts
   var DIMENSION_REGEX = /^(?<value>[-+]?(?:\d*\.)?\d+)(?<unit>[a-z]+|%)?$/i;
   var dimensions = new DefaultMap((input) => {
     let match = DIMENSION_REGEX.exec(input);
@@ -3315,7 +3314,7 @@
     return [valueAsNumber, unit];
   });
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/is-color.ts
+  // vendor/tailwindcss/src/utils/is-color.ts
   var HASH2 = 35;
   var NAMED_COLORS = /* @__PURE__ */ new Set([
     // CSS Level 1 colors
@@ -3516,7 +3515,7 @@
     return NAMED_COLORS.has(value2.toLowerCase());
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/infer-data-type.ts
+  // vendor/tailwindcss/src/utils/infer-data-type.ts
   var checks = {
     color: isColor,
     length: isLength,
@@ -3708,7 +3707,7 @@
     return num >= 0 && num % divisor === 0 && String(num) === String(value2);
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/replace-shadow-colors.ts
+  // vendor/tailwindcss/src/utils/replace-shadow-colors.ts
   var KEYWORDS = /* @__PURE__ */ new Set(["inset", "inherit", "initial", "revert", "unset"]);
   var LENGTH_FUNCTIONS = /* @__PURE__ */ new Set(["calc", "clamp", "max", "min", "--spacing"]);
   var COLOR_FUNCTIONS = /* @__PURE__ */ new Set([
@@ -3804,7 +3803,7 @@
     return shadows.join(", ");
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utilities.ts
+  // vendor/tailwindcss/src/utilities.ts
   var DEFAULT_SPACING_SUGGESTIONS = [
     "0",
     "0.5",
@@ -5603,7 +5602,7 @@
       ["border-style", "none"]
     ]);
     {
-      let borderSideUtility2 = function(classRoot, desc) {
+      let borderSideUtility = function(classRoot, desc) {
         utilities2.functional(classRoot, (candidate) => {
           if (!candidate.value) {
             if (candidate.modifier) return;
@@ -5665,81 +5664,80 @@
           }
         ]);
       };
-      var borderSideUtility = borderSideUtility2;
       let borderProperties = () => {
         return atRoot([property("--tw-border-style", "solid")]);
       };
-      borderSideUtility2("border", {
+      borderSideUtility("border", {
         width: (value2) => [
           decl("border-style", "var(--tw-border-style)"),
           decl("border-width", value2)
         ],
         color: (value2) => [decl("border-color", value2)]
       });
-      borderSideUtility2("border-x", {
+      borderSideUtility("border-x", {
         width: (value2) => [
           decl("border-inline-style", "var(--tw-border-style)"),
           decl("border-inline-width", value2)
         ],
         color: (value2) => [decl("border-inline-color", value2)]
       });
-      borderSideUtility2("border-y", {
+      borderSideUtility("border-y", {
         width: (value2) => [
           decl("border-block-style", "var(--tw-border-style)"),
           decl("border-block-width", value2)
         ],
         color: (value2) => [decl("border-block-color", value2)]
       });
-      borderSideUtility2("border-s", {
+      borderSideUtility("border-s", {
         width: (value2) => [
           decl("border-inline-start-style", "var(--tw-border-style)"),
           decl("border-inline-start-width", value2)
         ],
         color: (value2) => [decl("border-inline-start-color", value2)]
       });
-      borderSideUtility2("border-e", {
+      borderSideUtility("border-e", {
         width: (value2) => [
           decl("border-inline-end-style", "var(--tw-border-style)"),
           decl("border-inline-end-width", value2)
         ],
         color: (value2) => [decl("border-inline-end-color", value2)]
       });
-      borderSideUtility2("border-bs", {
+      borderSideUtility("border-bs", {
         width: (value2) => [
           decl("border-block-start-style", "var(--tw-border-style)"),
           decl("border-block-start-width", value2)
         ],
         color: (value2) => [decl("border-block-start-color", value2)]
       });
-      borderSideUtility2("border-be", {
+      borderSideUtility("border-be", {
         width: (value2) => [
           decl("border-block-end-style", "var(--tw-border-style)"),
           decl("border-block-end-width", value2)
         ],
         color: (value2) => [decl("border-block-end-color", value2)]
       });
-      borderSideUtility2("border-t", {
+      borderSideUtility("border-t", {
         width: (value2) => [
           decl("border-top-style", "var(--tw-border-style)"),
           decl("border-top-width", value2)
         ],
         color: (value2) => [decl("border-top-color", value2)]
       });
-      borderSideUtility2("border-r", {
+      borderSideUtility("border-r", {
         width: (value2) => [
           decl("border-right-style", "var(--tw-border-style)"),
           decl("border-right-width", value2)
         ],
         color: (value2) => [decl("border-right-color", value2)]
       });
-      borderSideUtility2("border-b", {
+      borderSideUtility("border-b", {
         width: (value2) => [
           decl("border-bottom-style", "var(--tw-border-style)"),
           decl("border-bottom-width", value2)
         ],
         color: (value2) => [decl("border-bottom-color", value2)]
       });
-      borderSideUtility2("border-l", {
+      borderSideUtility("border-l", {
         width: (value2) => [
           decl("border-left-style", "var(--tw-border-style)"),
           decl("border-left-width", value2)
@@ -5852,7 +5850,7 @@
     staticUtility("bg-repeat-space", [["background-repeat", "space"]]);
     staticUtility("bg-none", [["background-image", "none"]]);
     {
-      let resolveInterpolationModifier2 = function(modifier) {
+      let resolveInterpolationModifier = function(modifier) {
         let interpolationMethod = "in oklab";
         if (modifier?.kind === "named") {
           switch (modifier.value) {
@@ -5869,7 +5867,7 @@
           interpolationMethod = modifier.value;
         }
         return interpolationMethod;
-      }, handleBgLinear2 = function({ negative }) {
+      }, handleBgLinear = function({ negative }) {
         return (candidate) => {
           if (!candidate.value) return;
           if (candidate.value.kind === "arbitrary") {
@@ -5901,7 +5899,7 @@
           } else {
             return;
           }
-          let interpolationMethod = resolveInterpolationModifier2(candidate.modifier);
+          let interpolationMethod = resolveInterpolationModifier(candidate.modifier);
           return [
             decl("--tw-gradient-position", `${value2}`),
             rule("@supports (background-image: linear-gradient(in lab, red, red))", [
@@ -5910,7 +5908,7 @@
             decl("background-image", `linear-gradient(var(--tw-gradient-stops))`)
           ];
         };
-      }, handleBgConic2 = function({ negative }) {
+      }, handleBgConic = function({ negative }) {
         return (candidate) => {
           if (candidate.value?.kind === "arbitrary") {
             if (candidate.modifier) return;
@@ -5920,7 +5918,7 @@
               decl("background-image", `conic-gradient(var(--tw-gradient-stops,${value3}))`)
             ];
           }
-          let interpolationMethod = resolveInterpolationModifier2(candidate.modifier);
+          let interpolationMethod = resolveInterpolationModifier(candidate.modifier);
           if (!candidate.value) {
             return [
               decl("--tw-gradient-position", interpolationMethod),
@@ -5936,7 +5934,6 @@
           ];
         };
       };
-      var resolveInterpolationModifier = resolveInterpolationModifier2, handleBgLinear = handleBgLinear2, handleBgConic = handleBgConic2;
       let suggestedModifiers = [
         "oklab",
         "oklch",
@@ -5957,8 +5954,8 @@
         ["to-l", "to left"],
         ["to-tl", "to top left"]
       ]);
-      utilities2.functional("-bg-linear", handleBgLinear2({ negative: true }));
-      utilities2.functional("bg-linear", handleBgLinear2({ negative: false }));
+      utilities2.functional("-bg-linear", handleBgLinear({ negative: true }));
+      utilities2.functional("bg-linear", handleBgLinear({ negative: false }));
       suggest("bg-linear", () => [
         {
           values: [...linearGradientDirections.keys()],
@@ -5970,8 +5967,8 @@
           modifiers: suggestedModifiers
         }
       ]);
-      utilities2.functional("-bg-conic", handleBgConic2({ negative: true }));
-      utilities2.functional("bg-conic", handleBgConic2({ negative: false }));
+      utilities2.functional("-bg-conic", handleBgConic({ negative: true }));
+      utilities2.functional("bg-conic", handleBgConic({ negative: false }));
       suggest("bg-conic", () => [
         {
           hasDefaultValue: true,
@@ -5985,7 +5982,7 @@
       ]);
       utilities2.functional("bg-radial", (candidate) => {
         if (!candidate.value) {
-          let interpolationMethod = resolveInterpolationModifier2(candidate.modifier);
+          let interpolationMethod = resolveInterpolationModifier(candidate.modifier);
           return [
             decl("--tw-gradient-position", interpolationMethod),
             decl("background-image", `radial-gradient(var(--tw-gradient-stops))`)
@@ -8211,12 +8208,11 @@
       }
     ]);
     {
-      let ringShadowValue2 = function(value2) {
+      let ringShadowValue = function(value2) {
         return `var(--tw-ring-inset, ) 0 0 0 calc(${value2} + var(--tw-ring-offset-width)) var(--tw-ring-color, ${defaultRingColor})`;
-      }, insetRingShadowValue2 = function(value2) {
+      }, insetRingShadowValue = function(value2) {
         return `inset 0 0 0 ${value2} var(--tw-inset-ring-color, currentcolor)`;
       };
-      var ringShadowValue = ringShadowValue2, insetRingShadowValue = insetRingShadowValue2;
       let cssBoxShadowValue = [
         "var(--tw-inset-shadow)",
         "var(--tw-inset-ring-shadow)",
@@ -8478,7 +8474,7 @@
           let value2 = theme2.get(["--default-ring-width"]) ?? "1px";
           return [
             boxShadowProperties(),
-            decl("--tw-ring-shadow", ringShadowValue2(value2)),
+            decl("--tw-ring-shadow", ringShadowValue(value2)),
             decl("box-shadow", cssBoxShadowValue)
           ];
         }
@@ -8490,7 +8486,7 @@
               if (candidate.modifier) return;
               return [
                 boxShadowProperties(),
-                decl("--tw-ring-shadow", ringShadowValue2(value2)),
+                decl("--tw-ring-shadow", ringShadowValue(value2)),
                 decl("box-shadow", cssBoxShadowValue)
               ];
             }
@@ -8516,7 +8512,7 @@
           if (value2) {
             return [
               boxShadowProperties(),
-              decl("--tw-ring-shadow", ringShadowValue2(value2)),
+              decl("--tw-ring-shadow", ringShadowValue(value2)),
               decl("box-shadow", cssBoxShadowValue)
             ];
           }
@@ -8540,7 +8536,7 @@
           if (candidate.modifier) return;
           return [
             boxShadowProperties(),
-            decl("--tw-inset-ring-shadow", insetRingShadowValue2("1px")),
+            decl("--tw-inset-ring-shadow", insetRingShadowValue("1px")),
             decl("box-shadow", cssBoxShadowValue)
           ];
         }
@@ -8552,7 +8548,7 @@
               if (candidate.modifier) return;
               return [
                 boxShadowProperties(),
-                decl("--tw-inset-ring-shadow", insetRingShadowValue2(value2)),
+                decl("--tw-inset-ring-shadow", insetRingShadowValue(value2)),
                 decl("box-shadow", cssBoxShadowValue)
               ];
             }
@@ -8578,7 +8574,7 @@
           if (value2) {
             return [
               boxShadowProperties(),
-              decl("--tw-inset-ring-shadow", insetRingShadowValue2(value2)),
+              decl("--tw-inset-ring-shadow", insetRingShadowValue(value2)),
               decl("box-shadow", cssBoxShadowValue)
             ];
           }
@@ -9095,7 +9091,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     return false;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/css-functions.ts
+  // vendor/tailwindcss/src/css-functions.ts
   var CSS_FUNCTIONS = {
     "--alpha": alpha,
     "--spacing": spacing,
@@ -9252,7 +9248,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     });
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/compare.ts
+  // vendor/tailwindcss/src/utils/compare.ts
   var ZERO3 = 48;
   var NINE3 = 57;
   function compare(a, z) {
@@ -9285,7 +9281,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     return a.length - z.length;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/attribute-selector-parser.ts
+  // vendor/tailwindcss/src/attribute-selector-parser.ts
   var TAB4 = 9;
   var LINE_BREAK3 = 10;
   var CARRIAGE_RETURN2 = 13;
@@ -9439,7 +9435,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     }
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/canonicalize-calc-expressions.ts
+  // vendor/tailwindcss/src/canonicalize-calc-expressions.ts
   function canonicalizeCalcExpressionsAst(ast) {
     let canonicalized = false;
     walk(ast, {
@@ -9495,7 +9491,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     return toCss2([lhs]).localeCompare(toCss2([rhs])) > 0;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/apply-config-to-theme.ts
+  // vendor/tailwindcss/src/compat/apply-config-to-theme.ts
   function resolveThemeValue(value2, subValue = null) {
     if (Array.isArray(value2) && value2.length === 2 && typeof value2[1] === "object" && typeof value2[1] !== null) {
       return subValue ? value2[1][subValue] ?? null : value2[0];
@@ -9684,7 +9680,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     }
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/constant-fold-declaration.ts
+  // vendor/tailwindcss/src/constant-fold-declaration.ts
   function constantFoldDeclaration(input, rem = null, normalizeUnit = true) {
     let [folded, valueAst] = constantFoldDeclarationAst(parse3(input), rem, normalizeUnit);
     return folded ? toCss2(valueAst) : input;
@@ -9901,7 +9897,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     }
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/expand-declaration.ts
+  // vendor/tailwindcss/src/expand-declaration.ts
   function createPrefixedQuad(prefix, t = "top", r = "right", b = "bottom", l = "left") {
     return createBareQuad(`${prefix}-${t}`, `${prefix}-${r}`, `${prefix}-${b}`, `${prefix}-${l}`);
   }
@@ -9995,13 +9991,13 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     return null;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/replace-object.ts
+  // vendor/tailwindcss/src/utils/replace-object.ts
   function replaceObject(target, source) {
     for (let key in target) delete target[key];
     return Object.assign(target, source);
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/to-key-path.ts
+  // vendor/tailwindcss/src/utils/to-key-path.ts
   function toKeyPath(path) {
     let keypath = [];
     for (let part of segment(path, ".")) {
@@ -10029,7 +10025,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     return keypath;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/canonicalize-candidates.ts
+  // vendor/tailwindcss/src/canonicalize-candidates.ts
   function prepareDesignSystemStorage(baseDesignSystem, options) {
     let designSystem = baseDesignSystem;
     designSystem.storage[SIGNATURE_OPTIONS_KEY] ??= createSignatureOptionsCache();
@@ -11671,7 +11667,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     return result;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/intellisense.ts
+  // vendor/tailwindcss/src/intellisense.ts
   var IS_FRACTION2 = /^\d+\/\d+$/;
   function getClassList(design) {
     let items = new DefaultMap((utility) => ({
@@ -11754,7 +11750,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
   function getVariants(design) {
     let list2 = [];
     for (let [root, variant] of design.variants.entries()) {
-      let selectors2 = function({ value: value2, modifier } = {}) {
+      let selectors = function({ value: value2, modifier } = {}) {
         let name = root;
         if (value2) name += hasDash ? `-${value2}` : value2;
         if (modifier) name += `/${modifier}`;
@@ -11764,7 +11760,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
         if (applyVariant(node, variant2, design.variants) === null) {
           return [];
         }
-        let selectors3 = [];
+        let selectors2 = [];
         walk(node.nodes, {
           exit(node2, ctx) {
             if (node2.kind !== "rule" && node2.kind !== "at-rule") return;
@@ -11791,12 +11787,11 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
             for (let i = group.length - 1; i >= 0; i--) {
               selector2 = selector2 === "" ? group[i] : `${group[i]} { ${selector2} }`;
             }
-            selectors3.push(selector2);
+            selectors2.push(selector2);
           }
         });
-        return selectors3;
+        return selectors2;
       };
-      var selectors = selectors2;
       if (variant.kind === "arbitrary") continue;
       let hasDash = root !== "@";
       let values = design.variants.getCompletions(root);
@@ -11807,7 +11802,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
             values,
             isArbitrary: false,
             hasDash,
-            selectors: selectors2
+            selectors
           });
           break;
         }
@@ -11817,7 +11812,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
             values,
             isArbitrary: true,
             hasDash,
-            selectors: selectors2
+            selectors
           });
           break;
         }
@@ -11827,7 +11822,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
             values,
             isArbitrary: true,
             hasDash,
-            selectors: selectors2
+            selectors
           });
           break;
         }
@@ -11836,7 +11831,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     return list2;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/sort.ts
+  // vendor/tailwindcss/src/sort.ts
   function getClassOrder(design, classes) {
     let { astNodes, nodeSorting } = compileCandidates(Array.from(classes), design);
     let sorted = new Map(classes.map((className) => [className, null]));
@@ -11853,7 +11848,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     ]);
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/variants.ts
+  // vendor/tailwindcss/src/variants.ts
   var IS_VALID_VARIANT_NAME = /^@?[a-z0-9][a-zA-Z0-9_-]*(?<![_-])$/;
   var Variants = class {
     compareFns = /* @__PURE__ */ new Map();
@@ -12231,7 +12226,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     staticVariant("backdrop", ["&::backdrop"]);
     staticVariant("details-content", ["&::details-content"]);
     {
-      let contentProperties2 = function() {
+      let contentProperties = function() {
         return atRoot([
           atRule("@property", "--tw-content", [
             decl("syntax", '"*"'),
@@ -12240,13 +12235,12 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
           ])
         ]);
       };
-      var contentProperties = contentProperties2;
       variants.static(
         "before",
         (v) => {
           v.nodes = [
             styleRule("&::before", [
-              contentProperties2(),
+              contentProperties(),
               decl("content", "var(--tw-content)"),
               ...v.nodes
             ])
@@ -12259,7 +12253,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
         (v) => {
           v.nodes = [
             styleRule("&::after", [
-              contentProperties2(),
+              contentProperties(),
               decl("content", "var(--tw-content)"),
               ...v.nodes
             ])
@@ -12432,7 +12426,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     staticVariant("contrast-more", ["@media (prefers-contrast: more)"]);
     staticVariant("contrast-less", ["@media (prefers-contrast: less)"]);
     {
-      let compareBreakpointVariants2 = function(a, z, direction, lookup) {
+      let compareBreakpointVariants = function(a, z, direction, lookup) {
         if (a === z) return 0;
         let aValue = lookup.get(a);
         if (aValue === null) return direction === "asc" ? -1 : 1;
@@ -12440,7 +12434,6 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
         if (zValue === null) return direction === "asc" ? 1 : -1;
         return compareBreakpoints(aValue, zValue, direction);
       };
-      var compareBreakpointVariants = compareBreakpointVariants2;
       {
         let breakpoints = theme2.namespace("--breakpoint");
         let resolvedBreakpoints = new DefaultMap((variant) => {
@@ -12478,7 +12471,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
               { compounds: 1 /* AtRules */ }
             );
           },
-          (a, z) => compareBreakpointVariants2(a, z, "desc", resolvedBreakpoints)
+          (a, z) => compareBreakpointVariants(a, z, "desc", resolvedBreakpoints)
         );
         variants.suggest(
           "max",
@@ -12507,7 +12500,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
               { compounds: 1 /* AtRules */ }
             );
           },
-          (a, z) => compareBreakpointVariants2(a, z, "asc", resolvedBreakpoints)
+          (a, z) => compareBreakpointVariants(a, z, "asc", resolvedBreakpoints)
         );
         variants.suggest(
           "min",
@@ -12554,7 +12547,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
               { compounds: 1 /* AtRules */ }
             );
           },
-          (a, z) => compareBreakpointVariants2(a, z, "desc", resolvedWidths)
+          (a, z) => compareBreakpointVariants(a, z, "desc", resolvedWidths)
         );
         variants.suggest(
           "@max",
@@ -12593,7 +12586,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
               { compounds: 1 /* AtRules */ }
             );
           },
-          (a, z) => compareBreakpointVariants2(a, z, "asc", resolvedWidths)
+          (a, z) => compareBreakpointVariants(a, z, "asc", resolvedWidths)
         );
         variants.suggest(
           "@min",
@@ -12688,7 +12681,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     return features;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/design-system.ts
+  // vendor/tailwindcss/src/design-system.ts
   function buildDesignSystem(theme2, utilitiesSrc) {
     let utilities2 = createUtilities(theme2);
     let variants = createVariants(theme2);
@@ -12822,7 +12815,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     return designSystem;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/property-order.ts
+  // vendor/tailwindcss/src/property-order.ts
   var property_order_default = [
     "container-type",
     "pointer-events",
@@ -13204,7 +13197,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     "forced-color-adjust"
   ];
 
-  // ../tailwindcss/packages/tailwindcss/src/compile.ts
+  // vendor/tailwindcss/src/compile.ts
   function compileCandidates(rawCandidates, designSystem, {
     onInvalidCandidate,
     respectImportant
@@ -13424,7 +13417,7 @@ Only valid data types are: ${BARE_VALUE_DATA_TYPES.map((x) => `"${x}"`).join(", 
     };
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/apply.ts
+  // vendor/tailwindcss/src/apply.ts
   function substituteAtApply(ast, designSystem) {
     let features = 0 /* None */;
     let root = rule("&", ast);
@@ -13654,7 +13647,7 @@ ${toCss3([next])}`
     }
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/at-import.ts
+  // vendor/tailwindcss/src/at-import.ts
   async function substituteAtImports(ast, base2, loadStylesheet, recurseCount = 0, track = false) {
     let features = 0 /* None */;
     let promises = [];
@@ -13760,7 +13753,7 @@ ${toCss3([next])}`
     return root;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/config/deep-merge.ts
+  // vendor/tailwindcss/src/compat/config/deep-merge.ts
   function isPlainObject(value2) {
     if (Object.prototype.toString.call(value2) !== "[object Object]") {
       return false;
@@ -13789,7 +13782,7 @@ ${toCss3([next])}`
     return target;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/plugin-functions.ts
+  // vendor/tailwindcss/src/compat/plugin-functions.ts
   function createThemeFn(designSystem, configTheme, resolveValue) {
     return function theme2(path, defaultValue) {
       let lastSlash = path.lastIndexOf("/");
@@ -13939,7 +13932,7 @@ ${toCss3([next])}`
     obj[path[path.length - 1]] = value2;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/plugin-api.ts
+  // vendor/tailwindcss/src/compat/plugin-api.ts
   var IS_VALID_UTILITY_NAME = /^[a-z@][a-zA-Z0-9/%._-]*$/;
   function buildPluginApi({
     designSystem,
@@ -13971,13 +13964,12 @@ ${toCss3([next])}`
         } else if (Array.isArray(variant)) {
           if (variant.some((v) => v.includes(":merge("))) return;
         } else if (typeof variant === "object") {
-          let keyIncludes2 = function(object, search) {
+          let keyIncludes = function(object, search) {
             return Object.entries(object).some(
-              ([key, value2]) => key.includes(search) || typeof value2 === "object" && keyIncludes2(value2, search)
+              ([key, value2]) => key.includes(search) || typeof value2 === "object" && keyIncludes(value2, search)
             );
           };
-          var keyIncludes = keyIncludes2;
-          if (keyIncludes2(variant, ":merge(")) return;
+          if (keyIncludes(variant, ":merge(")) return;
         }
         if (typeof variant === "string" || Array.isArray(variant)) {
           designSystem.variants.static(
@@ -14138,7 +14130,7 @@ ${toCss3([next])}`
       matchUtilities(utilities2, options) {
         let types = options?.type ? Array.isArray(options?.type) ? options.type : [options.type] : ["any"];
         for (let [name, fn] of Object.entries(utilities2)) {
-          let compileFn2 = function({ negative }) {
+          let compileFn = function({ negative }) {
             return (candidate) => {
               if (candidate.value?.kind === "arbitrary" && types.length > 0 && !types.includes("any")) {
                 if (candidate.value.dataType && !types.includes(candidate.value.dataType)) {
@@ -14208,16 +14200,15 @@ ${toCss3([next])}`
               return ast2;
             };
           };
-          var compileFn = compileFn2;
           if (!IS_VALID_UTILITY_NAME.test(name)) {
             throw new Error(
               `\`matchUtilities({ '${name}' : \u2026 })\` defines an invalid utility name. Utilities should be alphanumeric and start with a lowercase letter, eg. \`scrollbar\`.`
             );
           }
           if (options?.supportsNegativeValues) {
-            designSystem.utilities.functional(`-${name}`, compileFn2({ negative: true }), { types });
+            designSystem.utilities.functional(`-${name}`, compileFn({ negative: true }), { types });
           }
-          designSystem.utilities.functional(name, compileFn2({ negative: false }), { types });
+          designSystem.utilities.functional(name, compileFn({ negative: false }), { types });
           designSystem.utilities.suggest(name, () => {
             let values = options?.values ?? {};
             let valueKeys = new Set(Object.keys(values));
@@ -14336,7 +14327,7 @@ ${toCss3([next])}`
     });
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/apply-keyframes-to-theme.ts
+  // vendor/tailwindcss/src/compat/apply-keyframes-to-theme.ts
   function applyKeyframesToTheme(designSystem, resolvedConfig) {
     for (let rule2 of keyframesToRules(resolvedConfig)) {
       designSystem.theme.addKeyframes(rule2);
@@ -14352,7 +14343,7 @@ ${toCss3([next])}`
     return rules;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/colors.ts
+  // vendor/tailwindcss/src/compat/colors.ts
   var colors_default = {
     inherit: "inherit",
     current: "currentcolor",
@@ -14699,7 +14690,7 @@ ${toCss3([next])}`
     }
   };
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/default-theme.ts
+  // vendor/tailwindcss/src/compat/default-theme.ts
   function bareValues(fn) {
     return {
       // Ideally this would be a Symbol but some of the ecosystem assumes object with
@@ -15824,7 +15815,7 @@ ${toCss3([next])}`
     }
   };
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/config/create-compat-config.ts
+  // vendor/tailwindcss/src/compat/config/create-compat-config.ts
   function createCompatConfig(cssTheme) {
     return {
       theme: {
@@ -15873,7 +15864,7 @@ ${toCss3([next])}`
     };
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/config/resolve-config.ts
+  // vendor/tailwindcss/src/compat/config/resolve-config.ts
   var minimal = {
     blocklist: [],
     future: {},
@@ -16032,7 +16023,7 @@ ${toCss3([next])}`
     return replacedThemeKeys;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/container.ts
+  // vendor/tailwindcss/src/compat/container.ts
   function registerContainerCompat(userConfig, designSystem) {
     let container = userConfig.theme.container || {};
     if (typeof container !== "object" || container === null) {
@@ -16111,7 +16102,7 @@ ${toCss3([next])}`
     return rules;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/dark-mode.ts
+  // vendor/tailwindcss/src/compat/dark-mode.ts
   function darkModePlugin({ addVariant, config }) {
     let darkMode = config("darkMode", null);
     let [mode, selector2 = ".dark"] = Array.isArray(darkMode) ? darkMode : [darkMode];
@@ -16153,7 +16144,7 @@ ${toCss3([next])}`
     }
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/legacy-utilities.ts
+  // vendor/tailwindcss/src/compat/legacy-utilities.ts
   function registerLegacyUtilities(designSystem) {
     for (let [value2, direction] of [
       ["t", "top"],
@@ -16249,7 +16240,7 @@ ${toCss3([next])}`
       ["start", "inset-inline-start"],
       ["end", "inset-inline-end"]
     ]) {
-      let handleInset2 = function({ negative }) {
+      let handleInset = function({ negative }) {
         return (candidate) => {
           if (candidate.value === null) return;
           if (candidate.value.kind === "arbitrary") {
@@ -16283,24 +16274,23 @@ ${toCss3([next])}`
           return [decl(property2, negative ? `calc(${value2} * -1)` : value2)];
         };
       };
-      var handleInset = handleInset2;
       designSystem.utilities.static(`${name}-auto`, () => [decl(property2, "auto")]);
       designSystem.utilities.static(`${name}-full`, () => [decl(property2, "100%")]);
       designSystem.utilities.static(`-${name}-full`, () => [decl(property2, "-100%")]);
       designSystem.utilities.static(`${name}-px`, () => [decl(property2, "1px")]);
       designSystem.utilities.static(`-${name}-px`, () => [decl(property2, "-1px")]);
-      designSystem.utilities.functional(`-${name}`, handleInset2({ negative: true }));
-      designSystem.utilities.functional(name, handleInset2({ negative: false }));
+      designSystem.utilities.functional(`-${name}`, handleInset({ negative: true }));
+      designSystem.utilities.functional(name, handleInset({ negative: false }));
     }
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/screens-config.ts
+  // vendor/tailwindcss/src/compat/screens-config.ts
   function registerScreensConfig(userConfig, designSystem) {
     let screens = userConfig.theme.screens || {};
     let coreOrder = designSystem.variants.get("min")?.order ?? 0;
     let additionalVariants = [];
     for (let [name, value2] of Object.entries(screens)) {
-      let insert2 = function(order) {
+      let insert = function(order) {
         designSystem.variants.static(
           name,
           (ruleNode) => {
@@ -16309,7 +16299,6 @@ ${toCss3([next])}`
           { order }
         );
       };
-      var insert = insert2;
       let coreVariant = designSystem.variants.get(name);
       let cssValue = designSystem.theme.resolveValue(name, ["--breakpoint"]);
       if (coreVariant && cssValue && !designSystem.theme.hasDefault(`--breakpoint-${name}`)) {
@@ -16321,9 +16310,9 @@ ${toCss3([next])}`
       }
       let query = buildMediaQuery(value2);
       if (deferInsert) {
-        additionalVariants.push(insert2);
+        additionalVariants.push(insert);
       } else {
-        insert2(coreOrder);
+        insert(coreOrder);
       }
     }
     if (additionalVariants.length === 0) return;
@@ -16367,7 +16356,7 @@ ${toCss3([next])}`
     }).filter(Boolean).join(", ");
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/theme-variants.ts
+  // vendor/tailwindcss/src/compat/theme-variants.ts
   function registerThemeVariantOverrides(config, designSystem) {
     let ariaVariants = config.theme.aria || {};
     let supportsVariants = config.theme.supports || {};
@@ -16431,7 +16420,7 @@ ${toCss3([next])}`
     }
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/compat/apply-compat-hooks.ts
+  // vendor/tailwindcss/src/compat/apply-compat-hooks.ts
   var IS_VALID_PREFIX = /^[a-z]+$/;
   async function applyCompatibilityHooks({
     designSystem,
@@ -16708,7 +16697,7 @@ This feature is not currently supported.`
     return features;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/source-maps/source-map.ts
+  // vendor/tailwindcss/src/source-maps/source-map.ts
   function createSourceMap({ ast }) {
     let lineTables = new DefaultMap((src) => createLineTable(src.code));
     let sourceTable = new DefaultMap((src) => ({
@@ -16765,7 +16754,7 @@ This feature is not currently supported.`
     return map;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/brace-expansion.ts
+  // vendor/tailwindcss/src/utils/brace-expansion.ts
   var NUMERICAL_RANGE = /^(-?\d+)\.\.(-?\d+)(?:\.\.(-?\d+))?$/;
   function expand(pattern) {
     let index = pattern.indexOf("{");
@@ -16837,7 +16826,7 @@ This feature is not currently supported.`
     return result;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/utils/topological-sort.ts
+  // vendor/tailwindcss/src/utils/topological-sort.ts
   function topologicalSort(graph, options) {
     let seen = /* @__PURE__ */ new Set();
     let wip = /* @__PURE__ */ new Set();
@@ -16862,7 +16851,7 @@ This feature is not currently supported.`
     return sorted;
   }
 
-  // ../tailwindcss/packages/tailwindcss/src/index.ts
+  // vendor/tailwindcss/src/index.ts
   var IS_VALID_PREFIX2 = /^[a-z]+$/;
   function throwOnLoadModule() {
     throw new Error("No `loadModule` function provided to `compile`");
@@ -18489,8 +18478,9 @@ ${output}`);
     }
     return "/" + out.join("/");
   }
-  async function build(inputCss, candidatesJson, tailwindCssText, twCssDir) {
+  async function build(inputCss, candidatesJson, tailwindCssText, twCssDir, theme2) {
     const candidates = JSON.parse(candidatesJson);
+    globalThis.__tw_daisyui_theme = theme2 || "light";
     async function loadModule(id, base2, resourceHint) {
       if (id === "daisyui") {
         return { path: "daisyui", base: "", module: package_default };

@@ -54,29 +54,24 @@ No minify, no `--minify`, no sourcemaps, no TypeScript in the driver (plain JS e
 
 - daisyUI only, and only bare `@plugin "daisyui"` (no theme options/flags yet — `--theme` flag wired but theme object lookup in driver needs the full daisyUI theme map; the `--theme` flag is accepted and passed to the JS module via `globalThis.__tw_daisyui_theme`).
 - Single platform tested (macOS arm64); `strip`ped binary is 4.8 MB (release 5.8 MB, debug 16 MB).
-- Requires the upstream checkout as a **sibling**: `../tailwindcss` (core sources + `index.css` read at build time; oxide linked via path dep). The upstream repo is never modified.
+- Tailwind core and oxide are pinned file-copy snapshots in `vendor/`; the standalone binary embeds the stylesheet and bundle, and does not need a checkout at runtime.
 - No perf work: the 958K bundle is evaled per invocation; no incremental/watch caching; promise handling assumes short sync-ish jobs (`Promise::finish`).
 
 ## Reproduce
 
 ```sh
-# 0. Sibling layout: <parent>/tailwindcss (upstream, untouched) + this repo
 git clone <this-repo> tailwind-qjs-daisyui && cd tailwind-qjs-daisyui
-
-# 1. Fetch JS deps: npm-pack daisyui@5 -> vendor/, npm install, bundle driver
-sh scripts/fetch-deps.sh        # or: npm install && npm run build:bundle
-
-# 2. Build + smoke (Node must pass before Rust)
-node driver-src/smoke.mjs fixture out.node.css
-cargo build --release && strip target/release/tailwindcss-qjs-poc
-
-# 3. Compile fixtures, compare against Node outputs
+cargo build --release
+# Standalone verification (no ../tailwindcss checkout is needed):
 ./target/release/tailwindcss-qjs-poc -i fixture/input.css -o out.css --content fixture
-./target/release/tailwindcss-qjs-poc -i fixture2/input.css -o out2.css --content fixture2
-cmp out.css out.node.css && cmp out2.css out2.node.css && echo PARITY
+# To run elsewhere, use absolute paths for the binary, input, output, and content dir.
 ```
 
-All `out*.css` are git-ignored build products; `vendor/package` (daisyUI, ~3 MB) and `dist/bundle.js` (verified artifact) are committed so `cargo build` works straight after step 1.
+`vendor/tailwindcss/` and `vendor/crates/` contain a pinned Tailwind/oxide snapshot; `vendor/package/` contains pinned daisyUI. `dist/bundle.js` is generated from these vendored sources. All are included in the repository, so neither build nor runtime requires `../tailwindcss`. The CSS entry files and JS bundle are embedded in the binary. `out*.css` are git-ignored build products.
+
+Run `npm test` for the shell integration suite (requires Node and Cargo). It builds the debug binary if absent, checks Tailwind core compilation, oxide content scanning and builtin daisyUI plugin output on both fixtures, verifies byte-for-byte parity against the Node smoke driver using each Rust scan's candidate list, and checks CLI/build error exit codes. CSS outputs are temporary and cleaned up afterward; no upstream Tailwind checkout or Vitest harness is required.
+
+For a standalone Node smoke check or to rebuild the JS bundle, run `npm install && npm run build:bundle` followed by `node driver-src/smoke.mjs fixture out.node.css`. Node and esbuild are **rebuild/test tools only**, not binary runtime dependencies. To refresh daisyUI at the pinned version, run `sh scripts/fetch-deps.sh`; for upstream source refresh and license/provenance details, see `vendor/VENDOR.md`.
 
 ## Multi-platform builds
 

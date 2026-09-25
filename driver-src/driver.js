@@ -2,7 +2,7 @@
 // Baked module table: `daisyui` resolves to the vendored package object,
 // `tailwindcss` stylesheet resolves to host-provided text. Everything else throws.
 
-import { compile } from '../../tailwindcss/packages/tailwindcss/src/index.ts'
+import { compile } from '../vendor/tailwindcss/src/index.ts'
 import daisyui from '../vendor/package/index.js'
 
 // --- Host polyfills (QuickJS lacks these Node/browser globals) ---

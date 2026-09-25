@@ -14,15 +14,22 @@ const outName = process.argv[3] ?? 'out.node.css'
 const candidatesArg = process.argv[4]
 
 // Host bridge (mirrors the Rust `__tw_read` global).
-globalThis.__tw_read = (p) => fs.readFileSync(p, 'utf8')
+const virtualTwDir = '/vendor/tailwindcss'
+globalThis.__tw_read = (p) => {
+  if (p.startsWith(virtualTwDir + '/')) {
+    const name = p.slice(virtualTwDir.length + 1)
+    if (['theme.css', 'preflight.css', 'utilities.css'].includes(name)) {
+      return fs.readFileSync(path.join(root, 'vendor/tailwindcss', name), 'utf8')
+    }
+  }
+  return fs.readFileSync(p, 'utf8')
+}
 
 await import('../dist/bundle.js')
 
 const inputCss = fs.readFileSync(path.join(root, fixtureName, 'input.css'), 'utf8')
-// Sibling checkout layout: <parent>/tailwindcss (upstream repo) next to this repo.
-const twRoot = path.resolve(root, '../tailwindcss/packages/tailwindcss')
-const tailwindCssText = fs.readFileSync(path.join(twRoot, 'index.css'), 'utf8')
-const twCssDir = twRoot
+const tailwindCssText = fs.readFileSync(path.join(root, 'vendor/tailwindcss/index.css'), 'utf8')
+const twCssDir = virtualTwDir
 
 // Fallback for the original fixture (extra scan words like `class`/`hello`
 // generate no CSS, so the short list is output-identical there).
